@@ -1,0 +1,104 @@
+:root {
+  --fundo: #f4f6f8;
+  --cartao: #ffffff;
+  --texto: #1d2733;
+  --suave: #5c6b7a;
+  --borda: #dde3e9;
+  --normal: #2e9d5b;
+  --atencao: #d9a400;
+  --alerta: #e46b12;
+  --critico: #cf2e2e;
+  --destaque: #1f6fb2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fundo: #12171d;
+    --cartao: #1b232c;
+    --texto: #e6ebf0;
+    --suave: #9aa8b6;
+    --borda: #2c3742;
+    --destaque: #5aa9e6;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  max-width: 1400px;
+  margin-inline: auto;
+}
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 0.95rem; margin: 0 0 8px; color: var(--suave); font-weight: 600; }
+.secao { margin: 24px 0 8px; font-size: 1.05rem; color: var(--texto); }
+.sub { margin: 4px 0 0; color: var(--suave); font-size: 0.85rem; }
+
+.topo { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.aviso {
+  font-size: 0.8rem; color: var(--suave); border-left: 3px solid var(--atencao);
+  padding: 6px 10px; background: var(--cartao); margin: 12px 0;
+}
+
+.cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 10px; padding: 14px; }
+.resumo, .grade, .graficos { display: grid; gap: 12px; }
+.resumo { grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.grade { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.graficos { grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); margin-top: 24px; }
+
+.numero { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.detalhe { font-size: 0.78rem; color: var(--suave); margin: 6px 0 0; }
+
+.selo {
+  display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
+  color: #fff; background: var(--suave);
+}
+.selo-grande { font-size: 1.1rem; padding: 8px 18px; }
+.n-Normal { background: var(--normal); }
+.n-Atenção { background: var(--atencao); color: #1d1d1d; }
+.n-Alerta { background: var(--alerta); }
+.n-Crítico { background: var(--critico); }
+
+.barra { position: relative; height: 10px; margin-top: 10px; }
+.barra-zonas {
+  position: absolute; inset: 0; border-radius: 5px;
+  background: linear-gradient(to right,
+    var(--normal) 0 25%, var(--atencao) 25% 50%, var(--alerta) 50% 75%, var(--critico) 75% 100%);
+  opacity: 0.85;
+}
+.marcador {
+  position: absolute; top: -4px; width: 4px; height: 18px; background: var(--texto);
+  border-radius: 2px; transform: translateX(-2px); left: 0; transition: left 0.4s;
+}
+
+.sensor { cursor: pointer; transition: border-color 0.2s; }
+.sensor:hover, .sensor.selecionado { border-color: var(--destaque); }
+.sensor .linha { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sensor .valor { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sensor .unidade { font-size: 0.85rem; color: var(--suave); }
+.sensor .limites { font-size: 0.72rem; color: var(--suave); margin-top: 6px; }
+.sensor .peso { font-size: 0.72rem; color: var(--suave); }
+
+.derivados { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font-size: 0.85rem; }
+.derivados dt { color: var(--suave); }
+.derivados dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.motivos { margin: 0; padding-left: 18px; font-size: 0.85rem; }
+
+.cabecalho-grafico { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.controles { display: flex; gap: 6px; }
+select, button {
+  font: inherit; font-size: 0.85rem; padding: 4px 8px; border-radius: 6px;
+  border: 1px solid var(--borda); background: var(--cartao); color: var(--texto);
+}
+button { cursor: pointer; }
+button:hover { border-color: var(--destaque); }
+.area-grafico { position: relative; height: 280px; }
+
+.contador { font-size: 0.8rem; color: var(--suave); font-weight: 400; }
+.tabela-rolagem { overflow-x: auto; max-height: 360px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+th { color: var(--suave); font-weight: 600; position: sticky; top: 0; background: var(--cartao); }
+tr.reconhecido { opacity: 0.55; }
