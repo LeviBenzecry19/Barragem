@@ -91,6 +91,7 @@ docs/                    Documentação do projeto
 | [05 – Banco de dados](docs/05-banco-de-dados.md) | Modelo ER, tabelas, consultas |
 | [06 – Hardware](docs/06-hardware.md) | Componentes, ligações, conversões, calibração |
 | [07 – Plano de testes](docs/07-plano-de-testes.md) | Testes automatizados, indicadores de avaliação, roteiro com hardware |
+| [08 – Hardware necessário](docs/08-hardware-necessario.md) | Todo o hardware para a aplicação ser válida: protótipo e barragem real, especificações, energia, custos |
 
 ## Variáveis monitoradas
 

@@ -2,20 +2,9 @@
 
 ## 6.1 Lista de componentes
 
-| Qtde | Componente | Função |
-|---:|---|---|
-| 1 | ESP32 DevKit V1 | Microcontrolador com Wi-Fi |
-| 1 | JSN-SR04T | Nível do reservatório (ultrassônico à prova d'água) |
-| 1 | Transdutor de pressão 0,5–4,5 V (0–100 kPa ou 0–1,2 MPa) | Pressão de poros no tubo piezométrico |
-| 1 | YF-S201 | Vazão de infiltração |
-| 2 | Potenciômetro linear (50–100 mm) | Deslocamento horizontal e recalque |
-| 1 | MPU-6050 | Inclinação e vibração |
-| 1 | Pluviômetro de báscula (reed switch) | Chuva |
-| 1 | DS18B20 (versão à prova d'água) | Temperatura |
-| 1 | ADS1115 (opcional, recomendado) | ADC de 16 bits para as entradas analógicas |
-| — | Resistores para divisores de tensão (ex.: 10 kΩ / 20 kΩ), 4,7 kΩ (pull-up do DS18B20) | Adequar sinais de 5 V a 3,3 V |
-| 1 | Fonte 5 V (ou bateria + painel solar + controlador de carga) | Alimentação |
-| 1 | Caixa IP65 | Proteção em campo |
+A lista completa do hardware necessário (protótipo e barragem real), com
+especificações, prioridades, alternativas, dimensionamento de energia e
+estimativa de custos, está em [08 – Hardware necessário](08-hardware-necessario.md).
 
 ## 6.2 Ligações (pinos padrão do firmware)
 
