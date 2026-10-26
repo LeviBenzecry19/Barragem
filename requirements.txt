@@ -1,0 +1,2 @@
+# O projeto usa só a biblioteca padrão do Python; nenhum pacote a instalar.
+# Este arquivo existe para o Railway (Railpack) reconhecer o projeto como Python.

@@ -5,6 +5,7 @@ Uso:
 
 Variável de ambiente opcional BARRAGEM_CHAVE_API: se definida, o envio de
 leituras (POST /api/leituras) exige o cabeçalho "X-Chave-API" com esse valor.
+Sem --porta, usa a variável PORT (definida por plataformas como o Railway) ou 8000.
 """
 
 import argparse
@@ -140,7 +141,7 @@ def criar_servidor(banco, host="0.0.0.0", porta=8000, chave_api=None):
 def main():
     parser = argparse.ArgumentParser(description="Servidor de monitoramento de barragens")
     parser.add_argument("--host", default="0.0.0.0")
-    parser.add_argument("--porta", type=int, default=8000)
+    parser.add_argument("--porta", type=int, default=int(os.environ.get("PORT", 8000)))
     parser.add_argument("--banco", default="barragem.db", help="arquivo SQLite")
     args = parser.parse_args()
 
