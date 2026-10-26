@@ -165,6 +165,29 @@ o FS não é calculado.
 | **DS18B20** (versão à prova d'água, cabo 1 m) | Recomendado | −55 a 125 °C; ±0,5 °C | Usado para contexto e para corrigir a deriva térmica de outros sensores. |
 | Resistor 4,7 kΩ (pull-up) | Obrigatório se usar o DS18B20 | — | Entre o pino de dados e 3,3 V. |
 
+## 8.3.9.1 Turbidez → `turbidez` (modo erosão interna)
+
+| Item | Prioridade | Especificação | Observações |
+|---|---|---|---|
+| **Turbidímetro TSD-10** (módulo com saída analógica) | Recomendado | Sensor óptico; a tensão cai com a turbidez | Fica dentro da caixa do medidor de vazão, mergulhado na água que sai do dreno. Água turva junto com vazão alta indica piping. |
+| Divisor de tensão | Obrigatório se usar o TSD-10 | Saída de até 4,5 V → ≤ 3,3 V | Ligado ao GPIO 33 (ADC1). |
+| Padrões de formazina (ou suspensões de solo preparadas) | Recomendado | 0, 20, 50 e 100 NTU | Calibração de `TURB_V_LIMPA` e `TURB_NTU_POR_V`. |
+
+## 8.3.9.2 Vento → `vento` (modo galgamento)
+
+| Item | Prioridade | Especificação | Observações |
+|---|---|---|---|
+| **Anemômetro de conchas** com reed switch | Recomendado | Um pulso por volta; 2,4 km/h por pulso/s (ajustar ao modelo) | No alto do mastro da estação, longe de obstáculos. Usado no cálculo da onda e da sobrelevação. |
+| Cabo 2 vias | Obrigatório se usar o anemômetro | — | Ligado ao GPIO 25 com pull-up interno. |
+
+## 8.3.9.3 Vazão afluente → `vazao_afluente` (balanço hídrico)
+
+Não faz parte da estação ESP32. A vazão chega pela rede, de uma estação
+fluviométrica no rio a montante (régua ou sensor de nível e curva-chave) ou de
+um serviço de previsão hidrológica, pelo mesmo `POST /api/leituras`. No
+protótipo pode ser digitada na página de sensores. No modelo físico em escala,
+um segundo YF-S201 na mangueira que abastece o reservatório faz esse papel.
+
 ## 8.3.10 Alimentação
 
 **Opção 1 – Bancada / laboratório** (obrigatório escolher uma das opções)
@@ -276,6 +299,8 @@ comprar**.
 | 1 | MPU-6050 (GY-521) | Obrigatório | 15 – 30 |
 | 1 | Pluviômetro de báscula | Obrigatório | 120 – 350 |
 | 1 | DS18B20 à prova d'água | Recomendado | 15 – 30 |
+| 1 | Turbidímetro TSD-10 | Recomendado | 50 – 100 |
+| 1 | Anemômetro de conchas com reed switch | Recomendado | 150 – 400 |
 | 1 | ADS1115 | Recomendado | 25 – 50 |
 | 1 | RTC DS3231 | Recomendado | 15 – 30 |
 | 1 | Módulo microSD + cartão | Recomendado | 30 – 50 |
@@ -292,8 +317,8 @@ comprar**.
 | Configuração | Inclui | Faixa estimada (R$) |
 |---|---|---:|
 | Bancada mínima | Itens obrigatórios de sensores + ESP32 + fonte + montagem | ≈ 565 – 1.325 |
-| Bancada recomendada | Mínima + ADS1115, RTC, microSD, DS18B20 | ≈ 650 – 1.485 |
-| Campo | Recomendada + caixa IP65 + kit solar | ≈ 1.060 – 2.215 |
+| Bancada recomendada | Mínima + ADS1115, RTC, microSD, DS18B20, turbidímetro, anemômetro | ≈ 850 – 1.985 |
+| Campo | Recomendada + caixa IP65 + kit solar | ≈ 1.260 – 2.715 |
 
 ---
 
@@ -369,6 +394,9 @@ chegar a **centenas de milhares de reais**, conforme o porte da barragem.
 | `inclinacao` | 5% | MPU-6050 | I2C: GPIO 21/22 | Tiltímetro |
 | `vibracao` | — | MPU-6050 | I2C: GPIO 21/22 | Acelerógrafo |
 | `temperatura` | — | DS18B20 | 1-Wire: GPIO 4 | Termistores dos instrumentos |
+| `turbidez` | — | TSD-10 | Analógico: GPIO 33 | Turbidímetro de processo |
+| `vento` | — | Anemômetro de conchas | Pulsos: GPIO 25 | Estação meteorológica |
+| `vazao_afluente` | — | — (chega pela rede) | — | Estação fluviométrica / previsão hidrológica |
 
 ## 8.6 Itens que exigem alteração no firmware
 

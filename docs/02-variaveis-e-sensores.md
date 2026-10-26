@@ -17,6 +17,9 @@ equivalente de baixo custo para o protótipo.
 | Inclinação (`inclinacao`) | Rotação de estruturas e taludes | Tiltímetro, inclinômetro | MPU-6050 (acelerômetro) | ° |
 | Vibração (`vibracao`) | Eventos sísmicos ou vibrações induzidas | Acelerógrafo / sismógrafo | MPU-6050 (pico de aceleração) | g |
 | Temperatura (`temperatura`) | Contexto ambiental; correção térmica de sensores | Termistor, termopar | DS18B20 | °C |
+| Turbidez (`turbidez`) | Solo carreado pela percolação: um dos melhores indicadores de erosão interna (piping) | Turbidímetro de processo, inspeção visual | TSD-10 (óptico, saída analógica) | NTU |
+| Vento (`vento`) | Ondas e sobrelevação que reduzem a borda livre | Anemômetro de estação meteorológica | Anemômetro de conchas com reed switch | km/h |
+| Vazão afluente (`vazao_afluente`) | Cheia chegando ao reservatório; antecipa o galgamento pelo balanço hídrico | Estação fluviométrica (régua e curva-chave), previsão hidrológica | Não vem do ESP32: enviada pela rede ou digitada na página de sensores | m³/s |
 
 ## Frequência de leitura
 

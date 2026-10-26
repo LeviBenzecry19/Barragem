@@ -80,6 +80,8 @@ def criar_handler(monitor, chave_api=None):
 
             if rota in ("/", "/index.html"):
                 return self._arquivo(PASTA_WEB / "index.html")
+            if rota in ("/sensores", "/sensores.html"):
+                return self._arquivo(PASTA_WEB / "sensores.html")
             if rota.startswith("/static/"):
                 return self._arquivo(PASTA_WEB / rota[len("/static/"):])
             if rota == "/api/estado":
@@ -100,8 +102,10 @@ def criar_handler(monitor, chave_api=None):
         def do_POST(self):
             rota = urlparse(self.path).path
 
-            if rota == "/api/leituras":
-                if chave_api and not hmac.compare_digest(
+            # /api/avaliar recebe o mesmo pacote, mas só calcula a prévia (não grava).
+            if rota in ("/api/leituras", "/api/avaliar"):
+                gravar = rota == "/api/leituras"
+                if gravar and chave_api and not hmac.compare_digest(
                         self.headers.get("X-Chave-API", ""), chave_api):
                     return self._erro(401, "Chave de API inválida")
                 try:
@@ -109,7 +113,9 @@ def criar_handler(monitor, chave_api=None):
                     if tamanho > 64 * 1024:
                         return self._erro(413, "Pacote muito grande")
                     pacote = json.loads(self.rfile.read(tamanho) or b"null")
-                    return self._json(monitor.registrar(pacote), 201)
+                    if gravar:
+                        return self._json(monitor.registrar(pacote), 201)
+                    return self._json(monitor.simular(pacote))
                 except json.JSONDecodeError:
                     return self._erro(400, "JSON inválido")
                 except ErroValidacao as e:

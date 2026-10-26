@@ -17,6 +17,11 @@
  *   - Inclinação e vibração ... MPU-6050 (acelerômetro/giroscópio I2C)
  *   - Chuva ................... pluviômetro de báscula (reed switch)
  *   - Temperatura ............. DS18B20
+ *   - Turbidez da drenagem .... TSD-10 (sensor óptico, saída analógica)
+ *   - Vento ................... anemômetro de conchas (reed switch, 1 pulso por volta)
+ *
+ * A vazão afluente (vazao_afluente) não é lida aqui: vem da estação
+ * fluviométrica a montante ou de uma previsão, pelo mesmo endpoint.
  *
  * Bibliotecas: ArduinoJson (v7), OneWire, DallasTemperature.
  * Credenciais de Wi-Fi e endereço do servidor ficam em credenciais.h
@@ -40,8 +45,10 @@ const int PINO_US_ECHO    = 18;
 const int PINO_PIEZO      = 34;   // ADC1 (entrada apenas)
 const int PINO_DESLOC     = 35;   // ADC1
 const int PINO_RECALQUE   = 32;   // ADC1
+const int PINO_TURBIDEZ   = 33;   // ADC1
 const int PINO_VAZAO      = 27;
 const int PINO_CHUVA      = 26;
+const int PINO_VENTO      = 25;
 const int PINO_TEMP       = 4;
 const int PINO_SDA        = 21;
 const int PINO_SCL        = 22;
@@ -59,6 +66,9 @@ const float DESLOC_MM_POR_V = 50.0 / 3.3;   // potenciômetro de 50 mm alimentad
 const float RECALQUE_MM_POR_V = 100.0 / 3.3;
 const float PULSOS_POR_LPM = 7.5;           // YF-S201: f(Hz) = 7,5 × Q(L/min)
 const float MM_POR_BASCULADA = 0.2794;      // pluviômetro de báscula típico
+const float KMH_POR_HZ_VENTO = 2.4;         // anemômetro de conchas: 1 pulso/s = 2,4 km/h
+const float TURB_V_LIMPA = 4.2;             // tensão do turbidímetro em água limpa (V)
+const float TURB_NTU_POR_V = 300.0;         // inclinação da curva V -> NTU (calibrar com formazina)
 const float ACC_LSB_POR_G = 8192.0;         // MPU-6050 em ±4 g
 const uint8_t MPU_ENDERECO = 0x68;
 
@@ -69,13 +79,15 @@ float deslocZeroMm = 0, recalqueZeroMm = 0, anguloZeroGraus = 0;
 volatile uint32_t pulsosVazao = 0;
 volatile uint32_t basculadas = 0;
 volatile unsigned long ultimaBasculada = 0;
+volatile uint32_t pulsosVento = 0;
+volatile unsigned long ultimoPulsoVento = 0;
 
 uint16_t chuvaPorHora[24] = {0};  // basculadas em cada uma das últimas 24 horas
 int horaAtual = 0;
 unsigned long inicioHora = 0;
 
 float picoVibracaoG = 0;
-unsigned long ultimoEnvio = 0, ultimaAmostra = 0, ultimaContagemVazao = 0;
+unsigned long ultimoEnvio = 0, ultimaAmostra = 0, ultimaContagemVazao = 0, ultimaContagemVento = 0;
 
 // Fila simples para reenviar pacotes quando o Wi-Fi/servidor estiver fora
 const int TAM_FILA = 20;
@@ -93,6 +105,14 @@ void IRAM_ATTR isrChuva() {
   if (t - ultimaBasculada > 200) {  // debounce do reed switch
     basculadas++;
     ultimaBasculada = t;
+  }
+}
+
+void IRAM_ATTR isrVento() {
+  unsigned long t = millis();
+  if (t - ultimoPulsoVento > 5) {  // debounce curto: ~40 pulsos/s a 100 km/h
+    pulsosVento++;
+    ultimoPulsoVento = t;
   }
 }
 
@@ -131,6 +151,25 @@ float lerVazaoLpm() {
   ultimaContagemVazao = agora;
   if (segundos <= 0) return 0;
   return (pulsos / segundos) / PULSOS_POR_LPM;
+}
+
+// Velocidade média do vento desde a última leitura
+float lerVentoKmh() {
+  noInterrupts();
+  uint32_t pulsos = pulsosVento;
+  pulsosVento = 0;
+  interrupts();
+  unsigned long agora = millis();
+  float segundos = (agora - ultimaContagemVento) / 1000.0f;
+  ultimaContagemVento = agora;
+  if (segundos <= 0) return 0;
+  return (pulsos / segundos) * KMH_POR_HZ_VENTO;
+}
+
+// Sensor óptico: a tensão cai à medida que a água fica turva
+float lerTurbidezNtu() {
+  float v = lerTensao(PINO_TURBIDEZ);
+  return max((TURB_V_LIMPA - v) * TURB_NTU_POR_V, 0.0f);
 }
 
 bool lerAcelerometro(float &ax, float &ay, float &az) {
@@ -246,6 +285,8 @@ String montarPacote() {
   l["deslocamento_horizontal"] = lerTensao(PINO_DESLOC) * DESLOC_MM_POR_V - deslocZeroMm;
   l["recalque"] = lerTensao(PINO_RECALQUE) * RECALQUE_MM_POR_V - recalqueZeroMm;
   l["chuva_24h"] = chuva24hMm();
+  l["turbidez"] = lerTurbidezNtu();
+  l["vento"] = lerVentoKmh();
 
   float ax, ay, az;
   if (lerAcelerometro(ax, ay, az)) {
@@ -269,8 +310,10 @@ void setup() {
   pinMode(PINO_US_ECHO, INPUT);
   pinMode(PINO_VAZAO, INPUT_PULLUP);
   pinMode(PINO_CHUVA, INPUT_PULLUP);
+  pinMode(PINO_VENTO, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(PINO_VAZAO), isrVazao, FALLING);
   attachInterrupt(digitalPinToInterrupt(PINO_CHUVA), isrChuva, FALLING);
+  attachInterrupt(digitalPinToInterrupt(PINO_VENTO), isrVento, FALLING);
   analogReadResolution(12);
 
   Wire.begin(PINO_SDA, PINO_SCL);
@@ -285,7 +328,7 @@ void setup() {
 
   conectarWiFi();
   configTime(0, 0, "pool.ntp.org", "a.st1.ntp.br");  // horário em UTC
-  inicioHora = ultimaContagemVazao = millis();
+  inicioHora = ultimaContagemVazao = ultimaContagemVento = millis();
   Serial.println("Estação iniciada.");
 }
 

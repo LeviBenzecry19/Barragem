@@ -36,7 +36,8 @@ Fluxo: **Sensores → Microcontrolador/IoT → Banco de dados → Software → D
 | Simulador | `simulador/simulador.py` | Gerar dados de cenários e enviá-los pela mesma API. |
 | API REST | `monitor/servidor.py` | Rotas HTTP, autenticação por chave, arquivos do dashboard. |
 | Serviço | `monitor/servico.py` | Validação, gravação, avaliação e geração de alertas. |
-| Análise | `monitor/analise.py` | Fórmulas, normalização, índice e classificação (funções puras). |
+| Análise | `monitor/analise.py` | Fórmulas, normalização, índice, modos de ruptura e classificação (funções puras). |
+| Tendências | `monitor/tendencias.py` | Taxas de variação, chuva antecedente, Fukuzono e modelos de valor esperado sobre o histórico (funções puras). |
 | Configuração | `monitor/config.py` | Limites, pesos e parâmetros geotécnicos. |
 | Banco | `monitor/banco.py` | Esquema e consultas SQLite. |
 | Dashboard | `monitor/web/` | Interface de visualização. |
@@ -58,7 +59,9 @@ sequenceDiagram
     S->>S: validar
     S->>B: inserir leituras
     S->>B: últimas leituras de cada sensor
-    S->>S: avaliar (índice, FS, regras)
+    S->>B: médias horárias do histórico
+    S->>S: tendências (taxas, API, Fukuzono, resíduos)
+    S->>S: avaliar (índice, modos de ruptura, regras)
     S->>B: inserir avaliação
     S->>B: inserir alertas (se subiu de nível)
     A-->>E: 201 {avaliacao, alertas_gerados}
@@ -69,12 +72,14 @@ sequenceDiagram
 | Método | Rota | Descrição |
 |---|---|---|
 | `POST` | `/api/leituras` | Recebe um pacote de leituras. Cabeçalho `X-Chave-API` se `BARRAGEM_CHAVE_API` estiver definida. |
-| `GET` | `/api/estado` | Última avaliação, últimas leituras, sensores e limites. |
+| `GET` | `/api/estado` | Última avaliação (com os modos de ruptura e seus indicadores), últimas leituras, sensores e limites. |
 | `GET` | `/api/historico?variavel=pressao_poros&horas=24` | Série histórica de uma variável. |
 | `GET` | `/api/indice?horas=24` | Série histórica do índice, FS e nível global. |
 | `GET` | `/api/alertas?pendentes=1` | Alertas (todos ou só os não reconhecidos). |
+| `POST` | `/api/avaliar` | Mesmo pacote de `/api/leituras`, mas só devolve a avaliação (prévia); nada é gravado e não exige chave. |
 | `POST` | `/api/alertas/{id}/reconhecer` | Marca um alerta como reconhecido. |
 | `GET` | `/` | Dashboard. |
+| `GET` | `/sensores` | Topologia da estação, explicação dos sensores e entrada manual de leituras (estação `MANUAL`). |
 
 Exemplo de pacote:
 

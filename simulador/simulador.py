@@ -11,10 +11,15 @@ Exemplos:
     python -m simulador.simulador --cenario cheia --modo tempo-real --intervalo 2
 
 Cenários:
-    normal      operação estável, oscilações diárias e ruído
-    cheia       chuva intensa eleva o reservatório; poropressão e vazão reagem com atraso
-    infiltracao percolação crescente (ex.: início de erosão interna); deslocamentos aceleram
-    sismo       operação normal com um evento de vibração e pequeno salto de deslocamento
+    normal       operação estável, oscilações diárias e ruído
+    cheia        chuva e vento fortes; a afluência eleva o reservatório; poropressão e vazão reagem com atraso
+    infiltracao  percolação crescente (ex.: início de erosão interna); a água fica turva e os deslocamentos aceleram
+    sismo        operação normal com um evento de vibração e pequeno salto de deslocamento
+    rebaixamento esvaziamento rápido do reservatório; o talude de montante continua saturado
+
+Os cenários comprimem dias de comportamento em --horas (24 h por padrão), então
+as taxas de variação ficam maiores que numa barragem real. Use --horas 168 para
+um ritmo mais realista.
 """
 
 import argparse
@@ -27,7 +32,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-CENARIOS = ("normal", "cheia", "infiltracao", "sismo")
+CENARIOS = ("normal", "cheia", "infiltracao", "sismo", "rebaixamento")
 
 
 def suave(p, inicio, fim):
@@ -52,19 +57,25 @@ def gerar_leitura(cenario, p, hora_do_dia, rng, acumulados):
     desloc = 3.0
     recalque = 8.0
     vibracao = abs(ruido(0.003))
+    turbidez = 3.0 + abs(ruido(0.5))
+    vento = 10.0 + 5.0 * ciclo + ruido(2.0)
+    afluente = 4.5 + ruido(0.2)
 
     if cenario == "cheia":
         chuva += 110 * math.exp(-((p - 0.35) / 0.12) ** 2)
-        subida = suave(p, 0.25, 0.65)
-        nivel += 3.6 * subida
-        poros += 24 * suave(p, 0.35, 0.80)
+        vento += 20 * math.exp(-((p - 0.35) / 0.10) ** 2)
+        afluente += 26 * math.exp(-((p - 0.40) / 0.15) ** 2)
+        nivel += 3.4 * suave(p, 0.25, 0.65)
+        poros += 20 * suave(p, 0.35, 0.80)
         vazao += 34 * suave(p, 0.35, 0.80)
+        turbidez += 10 * suave(p, 0.35, 0.80)   # escoamento superficial chega turvo ao dreno
         desloc += 8 * suave(p, 0.45, 0.90)
         recalque += 6 * suave(p, 0.45, 0.90)
     elif cenario == "infiltracao":
         nivel += 1.0 * suave(p, 0.0, 0.3)
         poros += 34 * suave(p, 0.15, 0.95)
         vazao += 60 * suave(p, 0.10, 0.95) ** 1.5
+        turbidez += 120 * suave(p, 0.5, 1.0) ** 1.5   # solo carreado pela percolação
         # Deslocamento cresce devagar e acelera no final (comportamento típico pré-ruptura).
         desloc += 2 + 45 * p ** 4
         recalque += 30 * p ** 3
@@ -74,6 +85,12 @@ def gerar_leitura(cenario, p, hora_do_dia, rng, acumulados):
         desloc += 6 * suave(p, 0.5, 0.52)
         recalque += 4 * suave(p, 0.5, 0.52)
         poros += 6 * math.exp(-max(0.0, p - 0.5) * 20) * (p >= 0.5)
+        turbidez += 25 * math.exp(-max(0.0, p - 0.5) * 30) * (p >= 0.5)
+    elif cenario == "rebaixamento":
+        nivel += 1.8 - 6.0 * suave(p, 0.3, 0.7)   # de 11,8 m para 5,8 m
+        poros -= 2 * suave(p, 0.4, 0.9)
+        vazao -= 6 * suave(p, 0.3, 0.8)
+        afluente -= 2.5
 
     # Deslocamentos são acumulados: nunca diminuem (exceto ruído de leitura).
     acumulados["desloc"] = max(acumulados.get("desloc", 0.0), desloc)
@@ -91,6 +108,9 @@ def gerar_leitura(cenario, p, hora_do_dia, rng, acumulados):
         "inclinacao": round(math.degrees(math.atan(desloc_acum / 3000.0)) + abs(ruido(0.005)), 3),
         "vibracao": round(vibracao, 4),
         "temperatura": round(24 + 6 * ciclo + ruido(0.4), 1),
+        "turbidez": round(max(0.0, turbidez), 1),
+        "vento": round(max(0.0, vento), 1),
+        "vazao_afluente": round(max(0.0, afluente), 2),
     }
 
 

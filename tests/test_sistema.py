@@ -74,20 +74,35 @@ class TestMonitor(unittest.TestCase):
         r = self.monitor.registrar({"instante": "2026-01-01T09:00:00-03:00", "leituras": {"recalque": 5}})
         self.assertEqual(r["instante"], "2026-01-01T12:00:00Z")
 
+    def test_simular_nao_grava_e_usa_ultimas_leituras(self):
+        self.monitor.registrar(pacote(pressao_poros=40.0))
+        alertas_antes = len(self.banco.alertas())
+        av = self.monitor.simular(pacote(nivel_reservatorio=14.5))
+        self.assertEqual(av["variaveis"]["nivel_reservatorio"]["nivel"], "Crítico")
+        self.assertEqual(av["variaveis"]["pressao_poros"]["nivel"], "Alerta")
+        self.assertNotIn("nivel_reservatorio", self.banco.ultimas_leituras())
+        self.assertEqual(len(self.banco.alertas()), alertas_antes)
+
 
 class TestCenariosSimulados(unittest.TestCase):
     """Detecção de alterações simuladas (indicador de avaliação do projeto)."""
 
-    def rodar(self, cenario, passos=150):
+    def rodar(self, cenario, passos=150, com_instantes=False, modos=False):
+        """Roda um cenário. Com instantes, as leituras cobrem 24 h e o histórico entra na avaliação."""
         import random
+        from datetime import datetime, timedelta, timezone
         banco = Banco(":memory:")
         monitor = Monitor(banco)
         rng, acum = random.Random(1), {}
+        inicio = datetime(2026, 1, 1, tzinfo=timezone.utc)
         niveis = []
         for i in range(passos):
             p = i / (passos - 1)
-            leit = simulador.gerar_leitura(cenario, p, (i * 24 / passos) % 24, rng, acum)
-            niveis.append(monitor.registrar({"leituras": leit})["avaliacao"]["nivel"])
+            pacote = {"leituras": simulador.gerar_leitura(cenario, p, (i * 24 / passos) % 24, rng, acum)}
+            if com_instantes:
+                pacote["instante"] = (inicio + timedelta(hours=24 * p)).strftime("%Y-%m-%dT%H:%M:%SZ")
+            av = monitor.registrar(pacote)["avaliacao"]
+            niveis.append({m["chave"]: m["nivel"] for m in av["modos"]} if modos else av["nivel"])
         banco.fechar()
         return niveis
 
@@ -107,6 +122,20 @@ class TestCenariosSimulados(unittest.TestCase):
 
     def test_sismo_gera_alerta(self):
         self.assertIn(self.pior(self.rodar("sismo")), ("Alerta", "Crítico"))
+
+    def test_normal_com_historico_permanece_normal(self):
+        # Com histórico, entram taxas, chuva antecedente e Fukuzono: nenhum alarme falso.
+        self.assertEqual(self.pior(self.rodar("normal", com_instantes=True)), "Normal")
+
+    def test_rebaixamento_avalia_talude_de_montante(self):
+        modos = self.rodar("rebaixamento", com_instantes=True, modos=True)
+        self.assertIsNone(modos[0]["talude_montante"])   # sem histórico ainda
+        self.assertIn("Atenção", [m["talude_montante"] for m in modos])
+
+    def test_infiltracao_com_historico_detecta_aceleracao(self):
+        modos = self.rodar("infiltracao", com_instantes=True, modos=True)
+        self.assertEqual(modos[-1]["deformacoes"], "Crítico")
+        self.assertEqual(modos[-1]["erosao_interna"], "Crítico")
 
 
 class TestAPI(unittest.TestCase):
@@ -167,6 +196,20 @@ class TestAPI(unittest.TestCase):
     def test_dashboard(self):
         with urllib.request.urlopen(self.base + "/") as resp:
             self.assertIn(b"Monitoramento", resp.read())
+
+    def test_pagina_sensores(self):
+        with urllib.request.urlopen(self.base + "/sensores") as resp:
+            self.assertIn(b"sensores.js", resp.read())
+        with urllib.request.urlopen(self.base + "/static/sensores.js") as resp:
+            self.assertIn(b"EXPLICACAO", resp.read())
+
+    def test_avaliar_dispensa_chave_e_nao_grava(self):
+        status, av = self.req("/api/avaliar", pacote(recalque=70.0), chave=None)
+        self.assertEqual(status, 200)
+        self.assertEqual(av["variaveis"]["recalque"]["nivel"], "Crítico")
+        _, hist = self.req("/api/historico?variavel=recalque&horas=1")
+        self.assertNotIn(70.0, [p["valor"] for p in hist["pontos"]])
+        self.assertEqual(self.req("/api/avaliar", {"leituras": {}}, chave=None)[0], 400)
 
 
 if __name__ == "__main__":

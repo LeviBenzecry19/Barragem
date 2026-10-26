@@ -8,8 +8,8 @@ python -m unittest discover -s tests -t .
 
 | Arquivo | O que verifica |
 |---|---|
-| `tests/test_analise.py` | Fórmulas (pressão hidrostática, tensão efetiva, FS), normalização, classificação, pesos, regras de sobreposição. |
-| `tests/test_sistema.py` | Gravação no banco, avaliação com última leitura de cada sensor, geração e deduplicação de alertas, validação de dados, API HTTP, cenários simulados. |
+| `tests/test_analise.py` | Fórmulas (pressão hidrostática, tensão efetiva, FS, varredura de profundidade, FS pseudoestático, rebaixamento, gradiente crítico, ondas, balanço hídrico, Monte Carlo), normalização, classificação, pesos, regras de sobreposição, modos de ruptura e séries temporais (taxas, API, Fukuzono, modelo de valor esperado). |
+| `tests/test_sistema.py` | Gravação no banco, avaliação com última leitura de cada sensor, geração e deduplicação de alertas, validação de dados, API HTTP, prévia sem gravação, cenários simulados com e sem histórico (incluindo rebaixamento rápido). |
 
 ## 7.2 Indicadores da proposta × como medir
 

@@ -20,13 +20,23 @@ Sensores → ESP32 (IoT) → API → Banco de dados → Análise → Dashboard �
 - **Modelo de análise**: pressão hidrostática, carga piezométrica, tensão
   efetiva (σ' = σ − u), razão de poropressão e **fator de segurança** de talude
   infinito; **índice experimental de risco** ponderado e regras de alerta.
-- **Alertas** gerados quando uma variável ou o nível global sobe de nível, sem
-  repetição enquanto o alerta anterior não for reconhecido.
+- **Modos de ruptura**, cada um combinando vários sensores e o histórico:
+  galgamento (borda livre com recalque e ondas de vento, previsão por balanço
+  hídrico), erosão interna (gradiente de saída, turbidez × vazão), talude de
+  jusante (varredura de profundidade, γ variável, confiabilidade por Monte
+  Carlo), talude de montante (rebaixamento rápido), sismo (FS pseudoestático) e
+  deformações (taxas, Fukuzono). Modelos de valor esperado alertam pelo resíduo.
+- **Alertas** gerados quando uma variável, um modo de ruptura ou o nível global
+  sobe de nível, sem repetição enquanto o alerta anterior não for reconhecido.
 - **Dashboard** web com valores atuais, níveis, limites, gráficos históricos,
   índice ao longo do tempo e lista de alertas.
-- **Simulador** de sensores com quatro cenários (normal, cheia, infiltração, sismo).
+- **Página de sensores** (`/sensores`), no estilo do Cisco Packet Tracer: topologia
+  da estação (vista lógica, com cabos por tipo de interface e pacotes animados) e
+  corte da barragem com a posição de cada sensor (vista física), explicação de cada
+  sensor e formulário para digitar leituras, com prévia da classificação antes de enviar.
+- **Simulador** de sensores com cinco cenários (normal, cheia, infiltração, sismo, rebaixamento).
 - **Firmware ESP32** para os sensores de baixo custo, com fila de reenvio.
-- **Testes automatizados** (32 testes) cobrindo fórmulas, regras, banco e API.
+- **Testes automatizados** (61 testes) cobrindo fórmulas, modos de ruptura, séries temporais, regras, banco e API.
 
 Tudo em Python com a biblioteca padrão: **não é preciso instalar pacotes**.
 
@@ -43,6 +53,7 @@ python -m simulador.simulador --cenario infiltracao --modo historico --horas 24
 
 # 3. Abrir o dashboard
 #    http://localhost:8000
+#    Sensores e entrada manual de leituras: http://localhost:8000/sensores
 ```
 
 Outras opções:
@@ -73,7 +84,7 @@ monitor/                 Software de monitoramento
   servico.py             Validação, avaliação e geração de alertas
   banco.py               Banco de dados SQLite
   servidor.py            API REST + dashboard
-  web/                   Dashboard (HTML, CSS, JavaScript)
+  web/                   Dashboard e página de sensores (HTML, CSS, JavaScript)
 simulador/simulador.py   Gerador de dados simulados
 firmware/esp32_barragem/ Firmware da estação de aquisição (ESP32)
 tests/                   Testes automatizados
@@ -92,6 +103,7 @@ docs/                    Documentação do projeto
 | [06 – Hardware](docs/06-hardware.md) | Componentes, ligações, conversões, calibração |
 | [07 – Plano de testes](docs/07-plano-de-testes.md) | Testes automatizados, indicadores de avaliação, roteiro com hardware |
 | [08 – Hardware necessário](docs/08-hardware-necessario.md) | Todo o hardware para a aplicação ser válida: protótipo e barragem real, especificações, energia, custos |
+| [09 – Guia do projeto](docs/09-guia-do-projeto.md) | Tabela de hardware, interpretação e correlações de cada sensor, guia das 45 afirmações a referenciar e resumo do projeto |
 
 ## Variáveis monitoradas
 
@@ -106,6 +118,9 @@ docs/                    Documentação do projeto
 | Inclinação | Rotação da estrutura | Inclinômetro / acelerômetro | 5% |
 | Vibração | Eventos sísmicos | Acelerômetro | alerta individual |
 | Temperatura | Contexto ambiental | Termômetro | alerta individual |
+| Turbidez da drenagem | Carreamento de solo (piping) | Turbidímetro | modo erosão interna |
+| Vento | Ondas que reduzem a borda livre | Anemômetro | modo galgamento |
+| Vazão afluente | Cheia chegando ao reservatório | Estação fluviométrica / previsão | modo galgamento |
 
 Índice = Σ Wᵢ × nᵢ, com cada leitura normalizada de 0 a 1 e pesos somando 100%.
 Detalhes e justificativa em [docs/03-metodologia-analise.md](docs/03-metodologia-analise.md).

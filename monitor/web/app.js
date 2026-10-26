@@ -9,9 +9,11 @@ const ROTULOS_DERIVADOS = {
   tensao_total_kpa: ["Tensão total (σ)", "kPa"],
   tensao_efetiva_kpa: ["Tensão efetiva (σ')", "kPa"],
   razao_poropressao_ru: ["Razão de poropressão (rᵤ)", ""],
+  chuva_antecedente_mm: ["Chuva antecedente (API)", "mm"],
 };
 
 let sensores = [];
+let modos = [];
 let variavelSelecionada = "pressao_poros";
 let graficoVariavel = null;
 let graficoIndice = null;
@@ -21,7 +23,13 @@ const fmt = (v, casas = 2) =>
   v === null || v === undefined
     ? "—"
     : Number(v).toLocaleString("pt-BR", { maximumFractionDigits: Math.abs(v) < 1 && v !== 0 ? Math.max(casas, 3) : casas });
-const nomeOrigem = (origem) => (sensores.find((s) => s.variavel === origem) || { nome: "Nível global" }).nome;
+function nomeOrigem(origem) {
+  if (origem.startsWith("modo:")) {
+    const m = modos.find((x) => `modo:${x.chave}` === origem);
+    return m ? `Modo: ${m.nome}` : "Modo de ruptura";
+  }
+  return (sensores.find((s) => s.variavel === origem) || { nome: "Nível global" }).nome;
+}
 const hora = (iso) => new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" });
 
 function escapar(texto) {
@@ -69,6 +77,7 @@ function renderEstado(estado) {
     })
     .join("");
   $("motivos").innerHTML = av.motivos.map((m) => `<li>${escapar(m)}</li>`).join("");
+  renderModos(av);
 
   $("sensores").innerHTML = sensores
     .map((s) => {
@@ -107,6 +116,42 @@ function renderEstado(estado) {
     sel.value = variavelSelecionada;
   }
   $("pendentes").textContent = estado.alertas_pendentes ? `(${estado.alertas_pendentes} pendentes)` : "";
+}
+
+function valorIndicador(i) {
+  if (i.valor === null) return "";
+  const n = Number(i.valor).toLocaleString("pt-BR", { minimumFractionDigits: i.casas, maximumFractionDigits: i.casas });
+  return `${n}${i.unidade ? " " + i.unidade : ""}`;
+}
+
+function renderModos(av) {
+  const el = $("modos");
+  if (!av.modos) {
+    el.innerHTML = '<p class="cartao detalhe">A última avaliação é anterior à análise por modos de ruptura. Envie uma nova leitura.</p>';
+    return;
+  }
+  modos = av.modos;
+  el.innerHTML = modos
+    .map((m) => {
+      const lista = m.indicadores.length
+        ? `<ul class="indicadores">${m.indicadores
+            .map(
+              (i) => `
+          <li class="${i.nivel ? "" : "informativo"}">
+            <div class="ind-linha"><span>${escapar(i.nome)}</span>
+              <span class="ind-valor">${valorIndicador(i)}${i.nivel ? " " + selo(i.nivel) : ""}</span></div>
+            ${i.detalhe ? `<div class="ind-detalhe">${escapar(i.detalhe)}</div>` : ""}
+          </li>`
+            )
+            .join("")}</ul>`
+        : '<p class="detalhe">Faltam leituras ou histórico para avaliar este modo.</p>';
+      return `
+        <article class="cartao modo">
+          <div class="modo-topo"><h2>${escapar(m.nome)}</h2>${m.nivel ? selo(m.nivel) : '<span class="selo">sem dados</span>'}</div>
+          ${lista}
+        </article>`;
+    })
+    .join("");
 }
 
 function renderAlertas(alertas) {

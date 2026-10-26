@@ -13,7 +13,13 @@
       <h1>Monitoramento da Estabilidade da Barragem</h1>
       <p class="sub">Protótipo acadêmico · atualizado <span id="atualizado">—</span></p>
     </div>
-    <div id="nivel-global" class="selo selo-grande">—</div>
+    <div class="topo-dir">
+      <nav class="nav" aria-label="Páginas">
+        <a href="/" aria-current="page">Dashboard</a>
+        <a href="/sensores">Sensores</a>
+      </nav>
+      <div id="nivel-global" class="selo selo-grande">—</div>
+    </div>
   </header>
 
   <p class="aviso">
@@ -29,9 +35,9 @@
       <p class="detalhe" id="cobertura"></p>
     </article>
     <article class="cartao">
-      <h2>Fator de segurança (talude)</h2>
+      <h2>Fator de segurança (talude de jusante)</h2>
       <div class="numero" id="fs">—</div>
-      <p class="detalhe">Talude infinito com poropressão · mínimo usual 1,5</p>
+      <p class="detalhe">Menor FS da varredura de profundidade · mínimo usual 1,5</p>
     </article>
     <article class="cartao">
       <h2>Grandezas derivadas</h2>
@@ -42,6 +48,9 @@
       <ul id="motivos" class="motivos"></ul>
     </article>
   </section>
+
+  <h2 class="secao">Modos de ruptura</h2>
+  <section id="modos" class="grade-modos"></section>
 
   <h2 class="secao">Sensores</h2>
   <section id="sensores" class="grade"></section>

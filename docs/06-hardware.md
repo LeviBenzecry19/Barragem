@@ -17,6 +17,8 @@ estimativa de custos, está em [08 – Hardware necessário](08-hardware-necessa
 | YF-S201 (sinal) | GPIO 27 | Interrupção; alimentar em 5 V, sinal com divisor |
 | Pluviômetro | GPIO 26 | Interrupção com pull-up interno, debounce de 200 ms |
 | DS18B20 | GPIO 4 | Pull-up de 4,7 kΩ para 3,3 V |
+| TSD-10 (turbidez) | GPIO 33 (ADC1) | Saída de até 4,5 V → divisor para ≤ 3,3 V |
+| Anemômetro de conchas | GPIO 25 | Interrupção com pull-up interno, debounce de 5 ms |
 | MPU-6050 SDA / SCL | GPIO 21 / GPIO 22 | I2C, endereço 0x68 |
 
 Usamos apenas pinos do ADC1 porque o ADC2 do ESP32 não funciona com o Wi-Fi ligado.
@@ -31,6 +33,8 @@ Usamos apenas pinos do ADC1 porque o ADC2 do ESP32 não funciona com o Wi-Fi lig
 | Potenciômetro | mm = V × (curso / 3,3 V) − zero da instalação |
 | Pluviômetro | chuva = basculadas × 0,2794 mm, soma móvel de 24 h |
 | MPU-6050 | ângulo = atan2(aₓ, √(a_y² + a_z²)); vibração = pico de \|‖a‖ − 1 g\| no minuto |
+| TSD-10 | NTU = (V em água limpa − V) × inclinação da curva de calibração (`TURB_V_LIMPA`, `TURB_NTU_POR_V`) |
+| Anemômetro | km/h = pulsos por segundo × 2,4 |
 
 ## 6.4 Calibração
 

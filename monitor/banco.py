@@ -143,6 +143,22 @@ class Banco:
         params.append(limite)
         return list(reversed(self._consultar(sql, params)))
 
+    def series_horarias(self, variaveis, desde, ate):
+        """Médias horárias de cada variável em [desde, ate): {variavel: [(epoch, valor), ...]}."""
+        marcas = ",".join("?" * len(variaveis))
+        linhas = self._consultar(
+            f"""SELECT s.variavel, (AVG(julianday(l.instante)) - 2440587.5) * 86400.0 AS t, AVG(l.valor) AS valor
+                FROM leituras l JOIN sensores s ON s.id = l.sensor_id
+                WHERE s.variavel IN ({marcas}) AND l.instante >= ? AND l.instante < ?
+                GROUP BY s.variavel, substr(l.instante, 1, 13)
+                ORDER BY t""",
+            (*variaveis, desde, ate),
+        )
+        series = {v: [] for v in variaveis}
+        for r in linhas:
+            series[r["variavel"]].append((r["t"], r["valor"]))
+        return series
+
     def historico_indice(self, desde=None, limite=2000):
         sql = "SELECT instante, indice, fator_seguranca, nivel FROM avaliacoes"
         params = []

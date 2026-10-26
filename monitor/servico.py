@@ -1,12 +1,16 @@
 """Regras de negócio: recebe leituras, avalia e gera alertas."""
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from . import analise, config
+from . import analise, config, tendencias
 from .config import NIVEIS
 
 log = logging.getLogger("monitor")
+
+# Variáveis cujo histórico entra nas taxas, na chuva antecedente e nos modelos.
+VARIAVEIS_HISTORICO = ("nivel_reservatorio", "pressao_poros", "vazao_infiltracao",
+                       "deslocamento_horizontal", "chuva_24h", "temperatura")
 
 
 class ErroValidacao(ValueError):
@@ -66,10 +70,52 @@ class Monitor:
         # A avaliação usa a última leitura conhecida de cada sensor, pois nem
         # todos os sensores precisam enviar dados no mesmo pacote.
         atuais = {k: d["valor"] for k, d in self.banco.ultimas_leituras().items()}
-        resultado = analise.avaliar(atuais)
+        resultado = analise.avaliar(atuais, contexto=self.contexto(instante, atuais))
         self.banco.inserir_avaliacao(instante, resultado)
         alertas = self._gerar_alertas(instante, anterior, resultado)
         return {"instante": instante, "avaliacao": resultado, "alertas_gerados": alertas}
+
+    def simular(self, pacote):
+        """Avalia um pacote sem gravar nada (prévia da página de sensores).
+
+        Segue a mesma regra de registrar: variáveis ausentes no pacote ficam
+        com a última leitura conhecida.
+        """
+        _, instante, leituras = validar_pacote(pacote)
+        atuais = {k: d["valor"] for k, d in self.banco.ultimas_leituras().items()}
+        atuais.update(leituras)
+        return analise.avaliar(atuais, contexto=self.contexto(instante, atuais))
+
+    def contexto(self, instante, atuais):
+        """Indicadores que dependem do histórico (médias horárias anteriores a 'instante').
+
+        O valor atual de cada variável entra como último ponto das séries.
+        """
+        cfg = config.TENDENCIAS
+        fim = datetime.fromisoformat(instante.replace("Z", "+00:00"))
+        agora = fim.timestamp()
+        dias = cfg["janela_modelo_dias"] + cfg["api_dias"]   # o API de cada ponto de treino olha mais 30 dias
+        desde = (fim - timedelta(days=dias)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        series = self.banco.series_horarias(VARIAVEIS_HISTORICO, desde, instante)
+        com_atual = {k: s + [(agora, atuais[k])] if k in atuais else s for k, s in series.items()}
+
+        taxas = {}
+        for k in ("nivel_reservatorio", "pressao_poros", "vazao_infiltracao", "deslocamento_horizontal"):
+            taxa = tendencias.taxa_diaria(com_atual[k], agora, cfg["janela_taxa_h"], cfg["min_horas_taxa"])
+            if taxa is not None:
+                taxas[k] = taxa
+        api = tendencias.chuva_antecedente(com_atual["chuva_24h"], agora, cfg["api_k"], cfg["api_dias"])
+        fukuzono = tendencias.velocidade_inversa(com_atual["deslocamento_horizontal"], agora,
+                                                 cfg["fukuzono_janela_h"], cfg["fukuzono_passo_h"],
+                                                 cfg["fukuzono_v_min"])
+        explicativas = {**atuais, "api": api}
+        residuos = {}
+        for alvo, modelo in config.MODELOS_RESIDUO.items():
+            r = tendencias.modelo_esperado(series, alvo, modelo["variaveis"], agora, explicativas, cfg,
+                                           modelo["piso_desvio"])
+            if r:
+                residuos[alvo] = r
+        return {"taxas": taxas, "api_mm": api, "fukuzono": fukuzono, "residuos": residuos}
 
     def _gerar_alertas(self, instante, anterior, atual):
         """Gera um alerta quando uma variável ou o nível global sobe de nível.
@@ -92,6 +138,18 @@ class Monitor:
                 msg = (f"{var.nome}: {str(round(dados['valor'], 3)).replace('.', ',')} {var.unidade} "
                        f"({antes} → {dados['nivel']})")
                 gerados.append(self._alertar(instante, chave, dados["nivel"], antes, dados["valor"], msg))
+
+        # Modos de ruptura: origem "modo:<chave>".
+        modos_antes = {m["chave"]: m["nivel"] for m in (anterior or {}).get("modos", []) if m["nivel"]}
+        for modo in atual.get("modos", []):
+            if not modo["nivel"]:
+                continue
+            origem = f"modo:{modo['chave']}"
+            antes = modos_antes.get(modo["chave"], "Normal")
+            if self._deve_alertar(modo["nivel"], antes, pendentes.get(origem)):
+                causas = [f"{i['nome']} → {i['nivel']}" for i in modo["indicadores"] if i["nivel"] not in (None, "Normal")]
+                msg = f"{modo['nome']}: {antes} → {modo['nivel']}. " + "; ".join(causas)
+                gerados.append(self._alertar(instante, origem, modo["nivel"], antes, None, msg))
 
         antes = niveis_antes.get("global", "Normal")
         if self._deve_alertar(atual["nivel"], antes, pendentes.get("global")):

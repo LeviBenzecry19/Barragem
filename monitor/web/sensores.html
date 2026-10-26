@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sensores · Monitor de Barragem</title>
+  <link rel="stylesheet" href="/static/estilo.css">
+</head>
+<body>
+  <header class="topo">
+    <div>
+      <h1>Sensores e entrada manual</h1>
+      <p class="sub">Topologia da estação, explicação de cada sensor e envio de leituras digitadas</p>
+    </div>
+    <div class="topo-dir">
+      <nav class="nav" aria-label="Páginas">
+        <a href="/">Dashboard</a>
+        <a href="/sensores" aria-current="page">Sensores</a>
+      </nav>
+      <span class="detalhe">Situação atual</span>
+      <div id="nivel-global" class="selo selo-grande">—</div>
+    </div>
+  </header>
+
+  <p class="aviso">
+    As leituras digitadas aqui são gravadas como vindas da estação <strong>MANUAL</strong> e entram no
+    histórico, no índice de risco e nos alertas como qualquer outra leitura.
+  </p>
+
+  <section class="bancada">
+    <article class="cartao area-trabalho">
+      <div class="abas" role="tablist" aria-label="Vista">
+        <button type="button" role="tab" id="aba-logico" data-vista="logico" aria-selected="true" aria-controls="vista">Lógico</button>
+        <button type="button" role="tab" id="aba-fisico" data-vista="fisico" aria-selected="false" aria-controls="vista">Físico</button>
+        <span class="detalhe">Clique em um dispositivo para ver a explicação</span>
+      </div>
+      <div class="tela">
+        <svg id="vista" viewBox="0 0 1200 800" aria-label="Topologia da estação de monitoramento">
+          <defs>
+            <pattern id="grade" width="20" height="20" patternUnits="userSpaceOnUse">
+              <circle class="ponto-grade" cx="1" cy="1" r="1"/>
+            </pattern>
+          </defs>
+          <rect width="1200" height="800" fill="url(#grade)"/>
+          <g id="camada-cena"></g>
+          <g id="camada-pdu"></g>
+        </svg>
+      </div>
+      <div id="legenda" class="legenda"></div>
+    </article>
+    <aside id="painel" class="cartao painel"></aside>
+  </section>
+
+  <h2 class="secao">Estação virtual: digite as leituras</h2>
+  <section class="cartao">
+    <form id="form-leituras" novalidate>
+      <div id="campos" class="campos"></div>
+      <div class="acoes">
+        <button type="button" id="btn-ultimas">Carregar últimas leituras</button>
+        <button type="button" id="btn-base">Valores de referência</button>
+        <details id="chave" class="chave">
+          <summary>Chave de API</summary>
+          <input id="chave-api" type="password" autocomplete="off"
+                 placeholder="só se BARRAGEM_CHAVE_API estiver definida" aria-label="Chave de API">
+        </details>
+        <button type="submit" id="btn-enviar" class="primario">Enviar leituras</button>
+      </div>
+    </form>
+    <div id="previa" class="previa"></div>
+    <div id="resultado" class="resultado" aria-live="polite"></div>
+  </section>
+
+  <script src="/static/sensores.js"></script>
+</body>
+</html>
